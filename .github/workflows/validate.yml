@@ -1,0 +1,31 @@
+name: Validate Ledger Methodology
+
+# Runs on every push and pull request that touches the dataset.
+# Enforces the core rule: every verdict must cite a named third-party
+# fact-checker with a working source_url. A PR that violates this fails.
+
+on:
+  push:
+    paths:
+      - "data/**.csv"
+      - "scripts/validate_ledger.py"
+      - ".github/workflows/validate.yml"
+  pull_request:
+    paths:
+      - "data/**.csv"
+      - "scripts/validate_ledger.py"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate dataset against methodology
+        run: python3 scripts/validate_ledger.py

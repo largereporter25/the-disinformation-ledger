@@ -1,0 +1,2 @@
+claim_id,date_claimed,actor,country,actor_category,claim_verbatim,topic_tag,platform,post_url,archived_url,verdict,verdict_source,source_url,source_date,views,reposts,likes,platform_corrected,claim_status,electoral_political_impact,notes
+CA::0001,2026-01-15,Example Politician,Canada,politician,"Exact quote of the claim here",immigration,X,https://x.com/.../status/...,https://archive.ph/...,False,Reuters Fact Check,https://www.reuters.com/fact-check/...,2026-01-16,120000,3400,8900,no,fact-checked,Cited example row — replace with real data,Flag here if active legal proceedings
