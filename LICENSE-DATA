@@ -1,5 +1,9 @@
 THE DISINFORMATION LEDGER — DATASET LICENSE
 
+This project is dual-licensed. The SOFTWARE (dashboard, scripts, tooling, docs)
+is under the MIT License — see the `LICENSE` file. The DATASET is under the
+terms below. See the README "License" section for the full scope split.
+
 The dataset in this repository — the fact-check records in `data/` (including
 `data/MASTER_GLOBAL.csv`), the derived `dashboard/public/data.json`, and the
 bulk dataset files served at `/dataset/` (NDJSON shards and `all.ndjson.gz`) —

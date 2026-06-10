@@ -19,20 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----------------------------------------------------------------------------
-
-NOTE ON SCOPE
-
-This MIT License covers the SOFTWARE only — the dashboard application, the
-build and research scripts, configuration, and documentation source.
-
-It does NOT cover the DATASET (the fact-check records in `data/` and the
-derived files in `dashboard/public/data.json` and `/dataset/`). The dataset is
-licensed separately under Creative Commons Attribution-NonCommercial 4.0
-International (CC-BY-NC-4.0). See `LICENSE-DATA` for the dataset terms.
-
-The portrait images in `dashboard/public/portraits/` are stylised editorial
-derivatives of photographs sourced from Wikimedia Commons; they remain subject
-to the license terms of their underlying source images and are provided for
-journalistic and editorial use.
