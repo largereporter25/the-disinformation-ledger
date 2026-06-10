@@ -1,0 +1,53 @@
+THE DISINFORMATION LEDGER — DATASET LICENSE
+
+The dataset in this repository — the fact-check records in `data/` (including
+`data/MASTER_GLOBAL.csv`), the derived `dashboard/public/data.json`, and the
+bulk dataset files served at `/dataset/` (NDJSON shards and `all.ndjson.gz`) —
+is licensed under the
+
+    Creative Commons Attribution-NonCommercial 4.0 International License
+    (CC-BY-NC-4.0)
+
+Full legal text: https://creativecommons.org/licenses/by-nc/4.0/legalcode
+Human-readable summary: https://creativecommons.org/licenses/by-nc/4.0/
+
+YOU ARE FREE TO:
+
+  - Share — copy and redistribute the dataset in any medium or format.
+  - Adapt — remix, transform, and build upon the dataset.
+
+UNDER THE FOLLOWING TERMS:
+
+  - Attribution — You must give appropriate credit to
+    "The Disinformation Ledger — Vansh Kunal Shah (editor-in-chief)",
+    provide a link to https://disinformation-ledger.vercel.app, and indicate
+    if changes were made. You may do so in any reasonable manner, but not in
+    any way that suggests the licensor endorses you or your use.
+
+  - NonCommercial — You may not use the dataset for commercial purposes.
+
+  - No additional restrictions — You may not apply legal terms or
+    technological measures that legally restrict others from doing anything
+    the license permits.
+
+IMPORTANT NOTICES:
+
+  1. Compile, never adjudicate. Every verdict in this dataset is attributed
+     to a named, independent third-party fact-checker with a source link. The
+     Ledger does not adjudicate claims itself. Verdicts and their wording
+     belong to the cited fact-checkers and remain subject to those
+     organisations' own rights and terms. The `source_url` field always
+     points to the original, authoritative published check — cite it.
+
+  2. No warranty. The dataset is provided "as is" without warranty of any
+     kind. The maintainers make no representation that any individual record
+     is complete, current, or free of error. Always verify against the cited
+     `source_url` before republishing.
+
+  3. Legal exposure. This dataset concerns named public figures and may touch
+     active legal proceedings in multiple jurisdictions (UK defamation and
+     contempt-of-court exposure in particular). You are responsible for your
+     own legal compliance when reusing or republishing any record.
+
+For commercial licensing or other permissions, contact:
+vanshkunalshah@gmail.com

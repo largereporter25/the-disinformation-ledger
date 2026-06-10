@@ -1,6 +1,8 @@
-# Contributing to The Global Disinformation Ledger
+# Contributing to The Disinformation Ledger
 
-Thank you for helping make fact-checks travel faster than lies. This project is open to OSINT investigators and journalists worldwide — but contributions are **gated by review** to protect the legal and editorial integrity of the ledger.
+Thank you for helping make the fact-checks travel faster than the lies. This project is open to OSINT investigators and journalists worldwide — but contributions are **gated by review** to protect the legal and editorial integrity of the ledger.
+
+By contributing you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md), and that your data contributions are licensed under [CC-BY-NC-4.0](LICENSE-DATA) and any code contributions under the [MIT License](LICENSE).
 
 ## The one rule that cannot be broken
 
@@ -35,3 +37,7 @@ You do not need to know Git. Open an Issue using the "Submit a claim" template a
 ## Tone
 
 Neutral, evidentiary, journalistic. Let the cited sources carry the judgement.
+
+## Security & sensitive reports
+
+For security vulnerabilities or sensitive data-integrity issues (e.g. a record touching active legal proceedings), do **not** open a public issue — follow [`SECURITY.md`](SECURITY.md).

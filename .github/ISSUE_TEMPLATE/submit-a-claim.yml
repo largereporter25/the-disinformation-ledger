@@ -1,0 +1,70 @@
+name: "Submit a claim"
+description: "Suggest a fact-checked claim for the ledger (no Git needed). A maintainer reviews before adding."
+title: "[Claim] <figure> — <short summary>"
+labels: ["claim-submission", "needs-review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for contributing. **The one rule:** every claim with a verdict
+        must cite a **named, independent third-party fact-checker** with a
+        **working link**. If no published check exists, leave the verdict blank —
+        we will log it as "unverified — no published check". We never adjudicate
+        claims ourselves.
+  - type: input
+    id: actor
+    attributes:
+      label: "Who made the claim?"
+      placeholder: "e.g. Nigel Farage"
+    validations:
+      required: true
+  - type: input
+    id: country
+    attributes:
+      label: "Country / jurisdiction"
+      placeholder: "e.g. United Kingdom"
+    validations:
+      required: true
+  - type: textarea
+    id: claim
+    attributes:
+      label: "The claim, quoted exactly"
+      description: "Verbatim. No paraphrasing, no editorialising."
+    validations:
+      required: true
+  - type: input
+    id: date
+    attributes:
+      label: "Date the claim was made"
+      placeholder: "YYYY-MM-DD"
+  - type: input
+    id: post_url
+    attributes:
+      label: "Link to the original post (if any)"
+  - type: input
+    id: verdict
+    attributes:
+      label: "Fact-checker's verdict"
+      placeholder: "e.g. False / Pants on Fire — leave blank if no published check"
+  - type: input
+    id: checker
+    attributes:
+      label: "Named fact-checker"
+      placeholder: "e.g. Full Fact, PolitiFact, Alt News"
+  - type: input
+    id: source_url
+    attributes:
+      label: "Working link to the published fact-check"
+      description: "Required if you provide a verdict. Must resolve to the specific check."
+  - type: checkboxes
+    id: legal
+    attributes:
+      label: "Legal check"
+      options:
+        - label: "This claim does NOT touch active legal proceedings (or I have flagged it below for human review)."
+          required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: "Notes (optional)"
+      description: "Flag any defamation / contempt-of-court / active-litigation concerns here."

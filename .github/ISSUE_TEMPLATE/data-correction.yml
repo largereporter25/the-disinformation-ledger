@@ -1,0 +1,39 @@
+name: "Data correction"
+description: "Report a factual error, broken source link, or mis-attributed fact-check."
+title: "[Correction] <claim_id> — <short summary>"
+labels: ["correction", "needs-review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Found a broken `source_url`, a wrong attribution, or an error in a
+        record? Report it here. For sensitive matters (e.g. active legal
+        proceedings), follow [SECURITY.md](../SECURITY.md) instead of filing a
+        public issue.
+  - type: input
+    id: claim_id
+    attributes:
+      label: "claim_id of the affected record"
+      placeholder: "e.g. US::DT_0001"
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: "Type of issue"
+      options:
+        - "Broken / dead source_url"
+        - "Wrong fact-checker attribution"
+        - "Wrong verdict wording"
+        - "Factual error in the claim record"
+        - "Possible legal exposure (defamation / active litigation)"
+        - "Other"
+    validations:
+      required: true
+  - type: textarea
+    id: detail
+    attributes:
+      label: "What is wrong, and what is the correct, sourced information?"
+      description: "Include the corrected, named-fact-checker source link where applicable."
+    validations:
+      required: true
