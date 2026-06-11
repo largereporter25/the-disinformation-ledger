@@ -23,3 +23,7 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+
+# Raw large files — only gz versions are committed
+dashboard/public/data.json
+dashboard/public/dataset/all.ndjson

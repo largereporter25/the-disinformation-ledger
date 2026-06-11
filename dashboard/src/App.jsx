@@ -5,6 +5,7 @@ import {
 } from './lib.js';
 import {
   ClaimsByCountry, ClaimsByYear, TopCheckers, TopTopics, ReachByLeader,
+  VerdictDistribution, CountryDeepDive,
 } from './Charts.jsx';
 
 /* ---------------- hash routing ---------------- */
@@ -30,16 +31,16 @@ function parseRoute(hash) {
 function Logo() {
   return (
     <svg className="brand-logo" width="34" height="34" viewBox="0 0 34 34" fill="none" aria-label="Ledger mark">
-      <rect x="1.5" y="1.5" width="31" height="31" stroke="#1a1a1a" strokeWidth="2" />
-      <line x1="7" y1="11" x2="27" y2="11" stroke="#1a1a1a" strokeWidth="2" />
-      <line x1="7" y1="17" x2="20" y2="17" stroke="#1a1a1a" strokeWidth="2" />
-      <line x1="7" y1="23" x2="24" y2="23" stroke="#1a1a1a" strokeWidth="2" />
+      <rect x="1.5" y="1.5" width="31" height="31" stroke="currentColor" strokeWidth="2" />
+      <line x1="7" y1="11" x2="27" y2="11" stroke="currentColor" strokeWidth="2" />
+      <line x1="7" y1="17" x2="20" y2="17" stroke="currentColor" strokeWidth="2" />
+      <line x1="7" y1="23" x2="24" y2="23" stroke="currentColor" strokeWidth="2" />
       <line x1="4" y1="29" x2="30" y2="6" stroke="#b91c1c" strokeWidth="2.4" />
     </svg>
   );
 }
 
-function Masthead({ route, navigate }) {
+function Masthead({ route, navigate, theme, toggleTheme }) {
   return (
     <header className="masthead">
       <div className="masthead-inner">
@@ -53,6 +54,30 @@ function Masthead({ route, navigate }) {
         <nav className="mast-nav">
           <button className={route.view === 'home' ? 'active' : ''} onClick={() => navigate('/')}>Board</button>
           <button className={route.view === 'claims' || route.view === 'leader' ? 'active' : ''} onClick={() => navigate('/claims')}>Claims</button>
+          <button
+            className="theme-toggle"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="4.2" />
+                <line x1="12" y1="2" x2="12" y2="4.5" />
+                <line x1="12" y1="19.5" x2="12" y2="22" />
+                <line x1="4.2" y1="4.2" x2="6" y2="6" />
+                <line x1="18" y1="18" x2="19.8" y2="19.8" />
+                <line x1="2" y1="12" x2="4.5" y2="12" />
+                <line x1="19.5" y1="12" x2="22" y2="12" />
+                <line x1="4.2" y1="19.8" x2="6" y2="18" />
+                <line x1="18" y1="6" x2="19.8" y2="4.2" />
+              </svg>
+            ) : (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+              </svg>
+            )}
+          </button>
         </nav>
       </div>
     </header>
@@ -169,6 +194,7 @@ const PAGE = 40;
 
 function Explorer({ data, baseClaims, lockedLabel, navigate }) {
   const [q, setQ] = useState('');
+  const [qDebounced, setQDebounced] = useState('');
   const [country, setCountry] = useState('');
   const [checker, setChecker] = useState('');
   const [topic, setTopic] = useState('');
@@ -180,8 +206,15 @@ function Explorer({ data, baseClaims, lockedLabel, navigate }) {
 
   const verdictOptions = ['False / Pants on Fire', 'Misleading / Half-true', 'Other rating', 'Unverified'];
 
+  // Debounce the free-text query so filtering the full 104k corpus only runs
+  // after the user pauses, keeping every keystroke instant.
+  useEffect(() => {
+    const t = setTimeout(() => setQDebounced(q), 120);
+    return () => clearTimeout(t);
+  }, [q]);
+
   const filtered = useMemo(() => {
-    const needle = q.trim().toLowerCase();
+    const needle = qDebounced.trim().toLowerCase();
     let arr = baseClaims.filter((c) => {
       if (needle) {
         const hay = (c.claim + ' ' + c.actor + ' ' + (c.topic || '') + ' ' + (c.verdict || '') + ' ' + (c.verdict_source || '')).toLowerCase();
@@ -207,9 +240,9 @@ function Explorer({ data, baseClaims, lockedLabel, navigate }) {
       return 0;
     });
     return arr;
-  }, [baseClaims, q, country, checker, topic, verdict, yr, sort]);
+  }, [baseClaims, qDebounced, country, checker, topic, verdict, yr, sort]);
 
-  useEffect(() => { setLimit(PAGE); }, [q, country, checker, topic, verdict, yr, sort, baseClaims]);
+  useEffect(() => { setLimit(PAGE); }, [qDebounced, country, checker, topic, verdict, yr, sort, baseClaims]);
 
   const years = useMemo(
     () => Object.keys(data.by_year).sort((a, b) => b.localeCompare(a)),
@@ -381,7 +414,21 @@ function LeaderView({ data, slug, navigate }) {
 }
 
 /* ---------------- home ---------------- */
-function Home({ data, navigate }) {
+function Home({ data, navigate, theme }) {
+  const [boardQ, setBoardQ] = useState('');
+  const [boardLimit, setBoardLimit] = useState(120);
+  const boardFiltered = useMemo(() => {
+    const q = boardQ.trim().toLowerCase();
+    // keep original rank (index in the full sorted list) when filtering
+    const withRank = data.leaders.map((l, i) => ({ l, rank: i + 1 }));
+    if (!q) return withRank;
+    return withRank.filter(({ l }) =>
+      (l.name && l.name.toLowerCase().includes(q)) ||
+      (l.country && l.country.toLowerCase().includes(q)) ||
+      (l.aliases && l.aliases.some((a) => a.toLowerCase().includes(q)))
+    );
+  }, [data.leaders, boardQ]);
+  const boardShown = boardFiltered.slice(0, boardLimit);
   return (
     <>
       <section className="hero">
@@ -410,11 +457,37 @@ function Home({ data, navigate }) {
               Tap a portrait to open that person's searchable claim record with working links to every fact-check.
             </p>
           </div>
+          <div className="board-search">
+            <input
+              className="board-search-input"
+              type="search"
+              placeholder="Filter the board by name, country or handle…"
+              value={boardQ}
+              onChange={(e) => { setBoardQ(e.target.value); setBoardLimit(120); }}
+              data-testid="board-search"
+              aria-label="Filter the board"
+            />
+            <span className="board-search-count">
+              {boardFiltered.length === data.leaders.length
+                ? `${fmtInt(data.leaders.length)} figures`
+                : `${fmtInt(boardFiltered.length)} of ${fmtInt(data.leaders.length)}`}
+            </span>
+          </div>
           <div className="leader-grid">
-            {data.leaders.map((l, i) => (
-              <LeaderCard key={l.slug} leader={l} rank={i + 1} navigate={navigate} />
+            {boardShown.map(({ l, rank }) => (
+              <LeaderCard key={l.slug} leader={l} rank={rank} navigate={navigate} />
             ))}
           </div>
+          {boardFiltered.length === 0 && (
+            <p className="board-empty" data-testid="board-empty">No tracked figure matches “{boardQ}”. Every claim is still searchable in the Explorer below.</p>
+          )}
+          {boardShown.length < boardFiltered.length && (
+            <div className="board-more-wrap">
+              <button className="board-more" data-testid="board-more" onClick={() => setBoardLimit((n) => n + 200)}>
+                Show more figures ({fmtInt(boardFiltered.length - boardShown.length)} remaining)
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -425,14 +498,32 @@ function Home({ data, navigate }) {
             <h2 className="sec-title">Patterns across the ledger</h2>
           </div>
           <div className="charts-grid">
-            <ClaimsByCountry byCountry={data.by_country} />
-            <ReachByLeader leaders={data.leaders} />
-            <ClaimsByYear byYear={data.by_year} />
-            <TopCheckers byChecker={data.by_checker} />
-            <TopTopics byTopic={data.by_topic} />
+            <ClaimsByCountry byCountry={data.by_country} theme={theme} />
+            <VerdictDistribution byVerdict={data.by_verdict} theme={theme} />
+            <ClaimsByYear byYear={data.by_year} theme={theme} />
+            <TopCheckers byChecker={data.by_checker} theme={theme} />
+            <TopTopics byTopic={data.by_topic} theme={theme} />
+            <ReachByLeader leaders={data.leaders} theme={theme} />
           </div>
         </div>
       </section>
+
+      {data.country_schema && (
+        <section className="section" style={{ paddingTop: 0 }}>
+          <div className="shell">
+            <div className="sec-head">
+              <div className="sec-kicker">Country schema</div>
+              <h2 className="sec-title">The ledger, nation by nation</h2>
+              <p className="sec-desc">
+                Each tracked country has its own evidentiary profile — verdict mix, the
+                fact-checkers doing the work, the recurring themes and the most-named actors.
+                Select a nation to read its record.
+              </p>
+            </div>
+            <CountryDeepDive schema={data.country_schema} byCountry={data.by_country} theme={theme} />
+          </div>
+        </section>
+      )}
 
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="shell">
@@ -440,14 +531,75 @@ function Home({ data, navigate }) {
             <div className="sec-kicker">The evidence</div>
             <h2 className="sec-title">Search every claim</h2>
             <p className="sec-desc">
-              Full-text search across {fmtInt(data.kpi.total_claims)} claims. Filter by country, verdict,
+              Full-text search across {fmtInt(data.kpi.total_claims)} documented claims. Filter by country, verdict,
               fact-checker, topic and year. Every published check links straight to the source.
+              {data.claims_meta && data.claims_meta.embedded < data.claims_meta.total ? (
+                <> The in-browser explorer loads a fast {fmtInt(data.claims_meta.embedded)}-claim working set
+                (all tracked-actor claims plus the highest-reach records); the complete
+                {' '}{fmtInt(data.claims_meta.total)}-row corpus is available through the public API below.</>
+              ) : null}
             </p>
           </div>
           <Explorer data={data} baseClaims={data.claims} lockedLabel={null} navigate={navigate} />
         </div>
       </section>
+
+      <ApiPanel kpi={data.kpi} />
     </>
+  );
+}
+
+/* ---------------- public read API panel ---------------- */
+const API_KEY = 'dl_live_bb0a86eadd276c14654f52f84f73470531b2bc3e';
+function ApiPanel({ kpi }) {
+  const [copied, setCopied] = useState(false);
+  const copyKey = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(API_KEY);
+      } else {
+        const el = document.getElementById('api-key-value');
+        if (el) { const r = document.createRange(); r.selectNodeContents(el); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('copy'); }
+      }
+      setCopied(true); setTimeout(() => setCopied(false), 1800);
+    } catch (e) { setCopied(false); }
+  };
+  return (
+    <section className="section api-section" style={{ paddingTop: 0 }}>
+      <div className="shell">
+        <div className="api-panel">
+          <div className="sec-kicker">For OSINT investigators</div>
+          <h2 className="sec-title">Query the whole corpus over a free API</h2>
+          <p className="sec-desc">
+            The complete {fmtInt(kpi.total_claims)}-row corpus — every country, actor, fact-checker and verdict —
+            is queryable as read-only JSON. Filter by country, actor, fact-checker, verdict, topic, year or full text,
+            paginate at scale, or pull aggregate stats. Each record links to its named third-party check.
+          </p>
+
+          <div className="api-key-row">
+            <span className="api-key-label">Public read key</span>
+            <code id="api-key-value" className="api-key-box">{API_KEY}</code>
+            <button className="api-copy" onClick={copyKey} aria-label="Copy API key">
+              {copied ? 'Copied ✓' : 'Copy'}
+            </button>
+          </div>
+
+          <div className="api-endpoints">
+            <div className="api-endpoint"><span className="api-verb">GET</span> <code>/api/v1/claims</code><span className="api-ep-note">filtered query · country, actor, checker, verdict, topic, year, q, limit, offset, sort</span></div>
+            <div className="api-endpoint"><span className="api-verb">GET</span> <code>/api/v1/stats</code><span className="api-ep-note">aggregate rollups · optional ?country=</span></div>
+            <div className="api-endpoint"><span className="api-verb">GET</span> <code>/api/v1/meta</code><span className="api-ep-note">schema + every valid filter value</span></div>
+            <div className="api-endpoint"><span className="api-verb">GET</span> <code>/dataset/all.ndjson.gz</code><span className="api-ep-note">bulk download · full corpus gzipped (11 MB), one JSON per line</span></div>
+          </div>
+
+          <pre className="api-example">{`curl "https://disinformation-ledger.vercel.app/api/v1/claims?key=${API_KEY}&country=United%20States&verdict=false&sort=reach&limit=50"`}</pre>
+
+          <p className="api-note">
+            <a className="api-docs-link" href="/api" target="_blank" rel="noopener">Read the full API docs →</a>
+            &nbsp; Dataset licensed CC&nbsp;BY-NC&nbsp;4.0. Free for non-commercial research and journalism with attribution.
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -463,6 +615,17 @@ function Footer({ kpi }) {
           verdict is attributed to a named third-party fact-check with a working link. Rows with no published check are
           marked honestly as unverified. Reach figures are documented snapshots; "—" denotes no recorded data.
         </p>
+        <p className="foot-meta">
+          <a href="/api" target="_blank" rel="noopener">Public read API</a>
+          <span className="foot-sep">·</span>
+          Engine licensed MIT
+          <span className="foot-sep">·</span>
+          Dataset licensed CC&nbsp;BY-NC&nbsp;4.0
+          <span className="foot-sep">·</span>
+          Vansh Kunal Shah, editor-in-chief
+          <span className="foot-sep">·</span>
+          Individual verdicts © their named third-party fact-checkers
+        </p>
       </div>
     </footer>
   );
@@ -474,6 +637,20 @@ export default function App() {
   const [err, setErr] = useState(null);
   const [hash, navigate] = useHashRoute();
   const route = parseRoute(hash);
+
+  const [theme, setTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ledger-theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+    } catch (e) { /* ignore */ }
+    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+    return 'light';
+  });
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    try { localStorage.setItem('ledger-theme', theme); } catch (e) { /* ignore */ }
+  }, [theme]);
+  const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
   useEffect(() => { loadData().then(setData).catch((e) => setErr(String(e))); }, []);
 
@@ -495,7 +672,7 @@ export default function App() {
 
   return (
     <>
-      <Masthead route={route} navigate={navigate} />
+      <Masthead route={route} navigate={navigate} theme={theme} toggleTheme={toggleTheme} />
       {route.view === 'leader' && <LeaderView data={data} slug={route.slug} navigate={navigate} />}
       {route.view === 'claims' && (
         <div className="shell section">
@@ -506,7 +683,7 @@ export default function App() {
           <Explorer data={data} baseClaims={data.claims} lockedLabel={null} navigate={navigate} />
         </div>
       )}
-      {route.view === 'home' && <Home data={data} navigate={navigate} />}
+      {route.view === 'home' && <Home data={data} navigate={navigate} theme={theme} />}
       <Footer kpi={data.kpi} />
     </>
   );

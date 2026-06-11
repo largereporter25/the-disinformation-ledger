@@ -1,6 +1,22 @@
 // Data loading + formatting helpers for the Global Disinformation Ledger
 
 export async function loadData() {
+  // Prefer the gzipped payload (≈7MB vs 42MB raw) and inflate in the browser
+  // with the native DecompressionStream. Falls back to raw data.json if the
+  // gzip is missing or the browser lacks DecompressionStream.
+  if (typeof DecompressionStream !== 'undefined') {
+    try {
+      const r = await fetch('./data.json.gz');
+      if (r.ok && r.body) {
+        const ds = new DecompressionStream('gzip');
+        const stream = r.body.pipeThrough(ds);
+        const text = await new Response(stream).text();
+        return JSON.parse(text);
+      }
+    } catch (e) {
+      // fall through to raw
+    }
+  }
   const res = await fetch('./data.json');
   if (!res.ok) throw new Error('failed to load data.json');
   return res.json();
@@ -39,9 +55,15 @@ const FLAGS = {
   France: '🇫🇷',
   Germany: '🇩🇪',
   India: '🇮🇳',
+  'India (Media)': '🇮🇳',
   Israel: '🇮🇱',
   Italy: '🇮🇹',
   Spain: '🇪🇸',
+  Poland: '🇵🇱',
+  Russia: '🇷🇺',
+  China: '🇨🇳',
+  'North Korea': '🇰🇵',
+  Iran: '🇮🇷',
 };
 export function flag(country) {
   return FLAGS[country] || '🏳️';
@@ -98,10 +120,14 @@ export function isUnverified(claim) {
 
 // Does a claim belong to a leader?
 export function claimMatchesLeader(claim, leader) {
-  if (leader.img === null && leader.match_actor) {
-    return claim.actor === leader.match_actor || claim.person === leader.name;
+  // Ironclad: match exactly the set the build used to count this leader, so the
+  // board card number always equals what the leader view renders.
+  if (claim.person === leader.name) return true;
+  if (leader.aliases && leader.aliases.length) {
+    return leader.aliases.indexOf(claim.actor) !== -1;
   }
-  return claim.person === leader.name;
+  if (leader.match_actor) return claim.actor === leader.match_actor;
+  return false;
 }
 
 export function year(dateStr) {
