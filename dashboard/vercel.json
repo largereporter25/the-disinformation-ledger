@@ -12,6 +12,9 @@
   "rewrites": [
     { "source": "/api", "destination": "/api/index" }
   ],
+  "crons": [
+    { "path": "/api/cron/ingest", "schedule": "0 */6 * * *" }
+  ],
   "headers": [
     {
       "source": "/dataset/(.*)",

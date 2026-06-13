@@ -3,11 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>The Global Disinformation Ledger — 1,656 fact-checked claims across 8 countries</title>
-    <meta name="description" content="An investigative accountability database of 1,656 fact-checked political disinformation claims across 8 countries and 41 tracked figures. Every verdict attributed to a named independent fact-checker with a working link. Making fact-checks travel faster than the lies." />
-    <meta property="og:title" content="The Global Disinformation Ledger" />
-    <meta property="og:description" content="1,656 documented claims · 39.5B views · every verdict cited to a named fact-checker." />
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('ledger-theme');
+          var dark = saved === 'dark' || (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+        } catch (e) {}
+      })();
+    </script>
+    <title>The Global Disinformation Ledger — 104,217 fact-checked claims across 14 countries</title>
+    <meta name="description" content="An investigative accountability database of 104,217 fact-checked political disinformation claims across 14 countries and 493 tracked figures. Every verdict attributed to a named independent fact-checker with a working link. Open data with a free read API for OSINT investigators. Making fact-checks travel faster than the lies." />
+    <link rel="canonical" href="https://disinformation-ledger.vercel.app/" />
+    <meta property="og:title" content="The Global Disinformation Ledger — Know Your Liars" />
+    <meta property="og:description" content="104,217 documented claims across 14 countries · 493 tracked figures · 167 fact-checkers · free read API · every verdict cited to a named fact-checker." />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://disinformation-ledger.vercel.app/" />
+    <meta property="og:image" content="https://disinformation-ledger.vercel.app/og_featured.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="The Disinformation Ledger — 104,217 fact-checked claims across 14 countries, 493 tracked figures" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="The Global Disinformation Ledger — Know Your Liars" />
+    <meta name="twitter:description" content="104,217 documented claims across 14 countries · 493 tracked figures · 167 fact-checkers · free read API · every verdict cited to a named fact-checker." />
+    <meta name="twitter:image" content="https://disinformation-ledger.vercel.app/og_featured.jpg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://api.fontshare.com" crossorigin />

@@ -12,12 +12,56 @@
 //   offset    (default 0)
 //   sort       ("reach" | "date" | "none")
 import { authorize, fetchJson, slugify, norm, toInt } from "../_lib.js";
+import { db, dbEnabled, rowToClaim } from "../_db.js";
 
 export default async function (req, res) {
   if (!authorize(req, res)) return;
   try {
     const u = new URL(req.url, "http://x");
     const p = Object.fromEntries(u.searchParams.entries());
+
+    // ---- SQL path (Neon) — same response shape as the static path below ----
+    if (dbEnabled()) {
+      const sql = db();
+      const limit = Math.min(toInt(p.limit, 100), 1000);
+      const offset = toInt(p.offset, 0);
+      const where = [];
+      const args = [];
+      const add = (clause, val) => { args.push(val); where.push(clause.replace("$?", "$" + args.length)); };
+      if (p.country) add("lower(country) = lower($?)", p.country);
+      if (p.actor) add("actor ILIKE '%' || $? || '%'", p.actor);
+      if (p.checker) add("verdict_source ILIKE '%' || $? || '%'", p.checker);
+      if (p.verdict) add("verdict ILIKE '%' || $? || '%'", p.verdict);
+      if (p.topic) add("topic_tag ILIKE '%' || $? || '%'", p.topic);
+      if (p.year) add("date_claimed LIKE $? || '%'", String(p.year).trim());
+      if (p.q) {
+        args.push(p.q);
+        const n = "$" + args.length;
+        where.push(`(claim_verbatim ILIKE '%' || ${n} || '%' OR actor ILIKE '%' || ${n} || '%' OR verdict ILIKE '%' || ${n} || '%' OR verdict_source ILIKE '%' || ${n} || '%' OR topic_tag ILIKE '%' || ${n} || '%')`);
+      }
+      const whereSql = where.length ? "WHERE " + where.join(" AND ") : "";
+      let orderSql = "";
+      if (p.sort === "reach") orderSql = "ORDER BY views DESC NULLS LAST";
+      else if (p.sort === "date") orderSql = "ORDER BY date_claimed DESC NULLS LAST";
+      const countRows = await sql.query(`SELECT count(*)::int AS n FROM claims ${whereSql}`, args);
+      const total = countRows[0]?.n || 0;
+      const rows = await sql.query(
+        `SELECT * FROM claims ${whereSql} ${orderSql} LIMIT ${limit} OFFSET ${offset}`, args);
+      res.setHeader("Cache-Control", "public, max-age=120, s-maxage=600");
+      return res.status(200).json({
+        ok: true,
+        query: { country: p.country || null, actor: p.actor || null, checker: p.checker || null, verdict: p.verdict || null, topic: p.topic || null, year: p.year || null, q: p.q || null, sort: p.sort || "none" },
+        total_matched: total,
+        returned: rows.length,
+        limit, offset,
+        next_offset: offset + limit < total ? offset + limit : null,
+        license: "CC-BY-NC-4.0",
+        attribution: "The Disinformation Ledger — Vansh Kunal Shah (editor-in-chief)",
+        results: rows.map(rowToClaim),
+      });
+    }
+
+    // ---- Static JSON fallback (original behaviour) ----
     const manifest = await fetchJson(req, "/dataset/manifest.json");
 
     // Determine which shards to scan.
