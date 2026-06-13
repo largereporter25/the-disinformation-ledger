@@ -1,6 +1,19 @@
 // Data loading + formatting helpers for the Global Disinformation Ledger
 
 export async function loadData() {
+  const base = await loadBaseSnapshot();
+  // Overlay live data (KPIs + claims ingested since the snapshot) so the
+  // headline numbers, Explorer and Board reflect every 6-hourly ingestion.
+  // Best-effort: any failure leaves the static base untouched.
+  try {
+    return await applyLiveOverlay(base);
+  } catch (e) {
+    return base;
+  }
+}
+
+// The frozen 104,217-claim snapshot — fast, CDN-served, identical to before.
+async function loadBaseSnapshot() {
   // Prefer the gzipped payload (≈7MB vs 42MB raw) and inflate in the browser
   // with the native DecompressionStream. Falls back to raw data.json if the
   // gzip is missing or the browser lacks DecompressionStream.
@@ -20,6 +33,54 @@ export async function loadData() {
   const res = await fetch('./data.json');
   if (!res.ok) throw new Error('failed to load data.json');
   return res.json();
+}
+
+// Fetch /api/live and fold the overlay onto the base snapshot in place.
+// Returns the same data object the rest of the app already expects.
+async function applyLiveOverlay(base) {
+  let live;
+  try {
+    const r = await fetch('/api/live', { headers: { accept: 'application/json' } });
+    if (!r.ok) return base;
+    live = await r.json();
+  } catch (e) {
+    return base;
+  }
+  if (!live || !live.ok) return base;
+
+  // 1) Live headline KPIs (only override fields the endpoint actually returned).
+  if (live.kpi) {
+    base.kpi = { ...base.kpi, ...live.kpi };
+  }
+
+  // 2) Append claims ingested since the snapshot (dedup by id, just in case).
+  if (Array.isArray(live.claims) && live.claims.length) {
+    const seen = new Set();
+    for (const c of base.claims) if (c && c.id) seen.add(c.id);
+    const fresh = live.claims.filter((c) => c && c.id && !seen.has(c.id));
+    if (fresh.length) {
+      base.claims = base.claims.concat(fresh);
+      if (base.claims_meta) {
+        const n = base.claims.length;
+        base.claims_meta = { ...base.claims_meta, embedded: n, total: n };
+      }
+    }
+  }
+
+  // 3) Bump board card counts for figures that gained claims.
+  if (live.by_actor && Array.isArray(base.leaders)) {
+    for (const ldr of base.leaders) {
+      const names = [ldr.name, ...((ldr.aliases) || [])].filter(Boolean);
+      let add = 0;
+      for (const nm of names) add += (live.by_actor[nm] || 0);
+      if (add > 0) {
+        ldr.claims = (ldr.claims || 0) + add;
+        if (typeof ldr.embedded_claims === 'number') ldr.embedded_claims += add;
+      }
+    }
+  }
+
+  return base;
 }
 
 // Format big numbers: 1.2B, 340M, 12K. Null/0 -> em dash.
