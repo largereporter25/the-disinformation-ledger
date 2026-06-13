@@ -16,10 +16,16 @@ import { db, dbEnabled } from "../_db.js";
 
 const GOOGLE_KEY = process.env.GOOGLE_FACTCHECK_API_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
-// Every 6h = 4 runs/day. Default to a generous slice so all 493 figures are
-// swept within a day; tune via env if Google quota becomes a constraint.
-const FIGURES_PER_RUN = parseInt(process.env.INGEST_FIGURES_PER_RUN || "150", 10);
+// Every 6h = 4 runs/day. Sweep a bounded slice per run so the function finishes
+// well inside maxDuration; across 4 runs/day all 493 figures are covered within
+// a few days. Tune via INGEST_FIGURES_PER_RUN if Google quota allows more.
+const FIGURES_PER_RUN = parseInt(process.env.INGEST_FIGURES_PER_RUN || "40", 10);
 const MAX_AGE_DAYS = parseInt(process.env.INGEST_MAX_AGE_DAYS || "14", 10);
+// Wall-clock budget (ms). Stop sweeping new figures once exceeded so the
+// function always returns cleanly before Vercel's maxDuration kills it.
+// Set comfortably below maxDuration (300s) to leave room for the final
+// ingestion_log write and response flush.
+const TIME_BUDGET_MS = parseInt(process.env.INGEST_TIME_BUDGET_MS || "270000", 10);
 
 // Active-legal-proceedings tripwires -> force human review (UK contempt/defamation posture).
 const LEGAL_KEYWORDS = [
@@ -77,7 +83,11 @@ export default async function (req, res) {
       `SELECT id, name, aliases FROM figures WHERE active = true
        ORDER BY last_swept NULLS FIRST, id LIMIT ${FIGURES_PER_RUN}`);
 
+    const startedAt = Date.now();
     for (const fig of figures) {
+      // Time-budget guard: stop sweeping new figures if we're near the limit.
+      // Remaining figures keep their old last_swept and will be picked up next run.
+      if (Date.now() - startedAt > TIME_BUDGET_MS) { log.time_budget_hit = true; break; }
       const queries = [fig.name, ...(fig.aliases || [])].filter(Boolean).slice(0, 2); // name + one alias
       for (const q of queries) {
         log.queries_run++;
