@@ -35,14 +35,13 @@ const LEGAL_KEYWORDS = [
   "pending appeal", "ongoing trial", "criminal proceedings", "remanded",
 ];
 
+// SECURITY FIX C-1: Fail CLOSED — if CRON_SECRET is unset, deny all requests.
+// Previously returned true (fail-open) allowing anonymous writes when secret was missing.
+// Also removed ?secret= query-string path (secrets in URLs leak to logs/referrers/proxies).
 function authorized(req) {
-  if (!CRON_SECRET) return true; // allow local testing when unset
+  if (!CRON_SECRET) return false; // FAIL CLOSED — never allow anonymous writes
   const h = req.headers["authorization"] || "";
-  if (h === `Bearer ${CRON_SECRET}`) return true;
-  try {
-    const u = new URL(req.url, "http://x");
-    return u.searchParams.get("secret") === CRON_SECRET;
-  } catch { return false; }
+  return h === `Bearer ${CRON_SECRET}`;
 }
 
 function hasLegalFlag(text) {
@@ -149,6 +148,7 @@ export default async function (req, res) {
 
     res.status(200).json({ ok: true, ...log, errors: log.errors.slice(0, 20) });
   } catch (e) {
-    res.status(500).json({ error: "ingest_failed", message: String(e?.message || e), partial: log });
+    // SECURITY FIX M-4: Never leak raw error messages to clients.
+    res.status(500).json({ error: "ingest_failed", partial: log });
   }
 }

@@ -10,6 +10,9 @@ function tally(recs, field) {
 }
 
 const ATTR = "The Disinformation Ledger — Vansh Kunal Shah (editor-in-chief)";
+// SECURITY FIX C-3: whitelist of allowed LIMIT values — never interpolate user-supplied numbers
+const ALLOWED_LIMITS = new Set([10, 20, 40, 50, 100]);
+function safeLim(n) { return ALLOWED_LIMITS.has(n) ? n : 50; }
 
 export default async function (req, res) {
   if (!authorize(req, res)) return;
@@ -22,9 +25,15 @@ export default async function (req, res) {
       const sql = db();
       const cond = country ? "WHERE lower(country) = lower($1)" : "";
       const cargs = country ? [country] : [];
-      const agg = async (field, lim) => (await sql.query(
-        `SELECT COALESCE(${field},'(none)') AS value, count(*)::int AS count FROM claims ${cond} GROUP BY 1 ORDER BY count DESC LIMIT ${lim}`, cargs))
-        .map(r => ({ value: r.value, count: r.count }));
+      // SECURITY FIX C-3: use safeLim() — never interpolate lim directly from a variable
+      const agg = async (field, lim) => {
+        const safeLimit = safeLim(lim);
+        const limitArgs = [...cargs, safeLimit];
+        const limitParam = "$" + limitArgs.length;
+        return (await sql.query(
+          `SELECT COALESCE(${field},'(none)') AS value, count(*)::int AS count FROM claims ${cond} GROUP BY 1 ORDER BY count DESC LIMIT ${limitParam}`, limitArgs))
+          .map(r => ({ value: r.value, count: r.count }));
+      };
       const totalRow = await sql.query(`SELECT count(*)::int AS n FROM claims ${cond}`, cargs);
       const total = totalRow[0]?.n || 0;
       if (!country) {
@@ -98,6 +107,7 @@ export default async function (req, res) {
       license: manifest.license, attribution: manifest.attribution,
     });
   } catch (e) {
-    res.status(500).json({ error: "server_error", message: String(e && e.message || e) });
+    // SECURITY FIX M-4: Never leak raw error messages to clients
+    res.status(500).json({ error: "server_error" });
   }
 };
