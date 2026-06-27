@@ -37,6 +37,7 @@ export default async function (req, res) {
       },
     });
   } catch (e) {
-    res.status(500).json({ error: "server_error", message: String(e && e.message || e) });
+    // SECURITY FIX M-4: Never leak raw error messages to clients
+    res.status(500).json({ error: "server_error" });
   }
 };

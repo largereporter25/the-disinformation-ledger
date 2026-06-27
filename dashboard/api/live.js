@@ -41,12 +41,22 @@ function rowToFrontClaim(r) {
     platform: r.platform || "web",
     verdict: r.verdict || r.review_rating || "",
     verdict_source: r.verdict_source || r.publisher || "",
-    source_url: r.source_url || null,
+    // SECURITY FIX M-1: safeHref — reject javascript: and non-http(s) URLs
+    source_url: safeHref(r.source_url),
     views: Number(r.views || 0),
     reposts: Number(r.reposts || 0),
     likes: Number(r.likes || 0),
     auto: true,                        // marker: ingested after the snapshot
   };
+}
+
+// SECURITY FIX M-1: Only allow http/https URLs to prevent javascript: injection
+function safeHref(u) {
+  if (!u) return null;
+  try {
+    const x = new URL(u);
+    return /^https?:$/.test(x.protocol) ? x.href : null;
+  } catch { return null; }
 }
 
 export default async function (req, res) {
@@ -119,7 +129,7 @@ export default async function (req, res) {
       claims,
     });
   } catch (e) {
-    // Soft-fail: the dashboard falls back to the static base on any error.
-    res.status(200).json({ ok: false, reason: "error", message: String(e?.message || e), kpi: null, claims: [] });
+    // SECURITY FIX M-4: Never leak raw error messages. Soft-fail: dashboard falls back to static base.
+    res.status(200).json({ ok: false, reason: "error", kpi: null, claims: [] });
   }
 }

@@ -27,3 +27,8 @@ Thumbs.db
 # Raw large files — only gz versions are committed
 dashboard/public/data.json
 dashboard/public/dataset/all.ndjson
+
+# SECURITY FIX L-1: Never commit environment files with real secrets
+.env
+.env.*
+!.env.example
