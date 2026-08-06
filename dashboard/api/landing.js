@@ -81,26 +81,39 @@ async function loadKpi() {
 }
 
 // The built shell is immutable for the lifetime of a deployment, so a warm
-// container only ever fetches it once.
-let shellCache = null;
+// container only ever fetches it once per origin.
+const shellCache = new Map();
 
-function shellOrigin() {
-  // LANDING_SHELL_ORIGIN exists for local `vite preview` runs. VERCEL_URL is
-  // the deployment's own host, so previews read their own build rather than
-  // production's.
+function shellOrigin(req) {
+  // LANDING_SHELL_ORIGIN exists for local `vite preview` runs.
   if (process.env.LANDING_SHELL_ORIGIN) return process.env.LANDING_SHELL_ORIGIN;
-  return process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : SITE_URL;
+
+  // Derive the origin from the request that reached us. Deliberately NOT
+  // VERCEL_URL: that is the deployment-specific host, which Vercel Deployment
+  // Protection refuses anonymous requests to, so fetching it from inside the
+  // function fails even in production. The inbound host is the alias the
+  // crawler actually used, and is therefore reachable by definition.
+  const host = req?.headers?.["x-forwarded-host"] || req?.headers?.host;
+  if (host) {
+    const proto = req.headers["x-forwarded-proto"]?.split(",")[0] || "https";
+    return `${proto}://${host}`;
+  }
+  return process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : SITE_URL;
 }
 
-async function loadShell() {
-  if (shellCache) return shellCache;
-  const res = await fetch(new URL("/index.html", shellOrigin()), {
+async function loadShell(req) {
+  const origin = shellOrigin(req);
+  const cached = shellCache.get(origin);
+  if (cached) return cached;
+  const res = await fetch(new URL("/index.html", origin), {
     headers: { accept: "text/html" },
   });
   if (!res.ok) throw new Error(`shell fetch failed: ${res.status}`);
   const html = await res.text();
   if (!html.includes('id="root"')) throw new Error("shell missing #root");
-  shellCache = html;
+  shellCache.set(origin, html);
   return html;
 }
 
@@ -189,7 +202,7 @@ function inject(shell, kpi) {
 export default async function handler(req, res) {
   let shell;
   try {
-    shell = await loadShell();
+    shell = await loadShell(req);
   } catch {
     // Cannot reach the built shell — let Vercel serve the static file instead
     // of returning a broken homepage.
