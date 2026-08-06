@@ -10,6 +10,7 @@
     }
   },
   "rewrites": [
+    { "source": "/", "destination": "/api/landing" },
     { "source": "/api", "destination": "/api/index" }
   ],
   "crons": [
