@@ -19,6 +19,11 @@ import { db, dbEnabled } from "./_db.js";
 const SITE_URL = "https://disinformation-ledger.vercel.app/";
 const IMAGE_URL = `${SITE_URL}og_featured.jpg`;
 const SITE_NAME = "The Disinformation Ledger";
+// The Vite build renames its output to app.html so that "/" has no static
+// file match. Vercel resolves static files BEFORE applying rewrites, so
+// while dist/index.html existed the "/" -> /api/landing rewrite could never
+// run and crawlers kept receiving the frozen build-time document.
+const SHELL_PATH = "/app.html";
 
 // Used only when a database is intentionally not configured, such as a local
 // static preview. Production has DATABASE_URL and always uses the live query.
@@ -107,7 +112,7 @@ async function loadShell(req) {
   const origin = shellOrigin(req);
   const cached = shellCache.get(origin);
   if (cached) return cached;
-  const res = await fetch(new URL("/index.html", origin), {
+  const res = await fetch(new URL(SHELL_PATH, origin), {
     headers: { accept: "text/html" },
   });
   if (!res.ok) throw new Error(`shell fetch failed: ${res.status}`);
@@ -207,7 +212,7 @@ export default async function handler(req, res) {
     // Cannot reach the built shell — let Vercel serve the static file instead
     // of returning a broken homepage.
     res.setHeader("Cache-Control", "public, max-age=0, s-maxage=60");
-    res.redirect(307, "/index.html");
+    res.redirect(307, SHELL_PATH);
     return;
   }
 
